@@ -1,9 +1,12 @@
 import 'package:chatapp/user_image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 //import 'package:firebase_core/firebase_core.dart.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:chatapp/firebase_options.dart';
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 
 final _firebase = FirebaseAuth.instance;
@@ -23,16 +26,24 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _enteredEmail = '';
   var _enteredPassword = '';
+  File? _selectedItem;
+  var _isAuth = false;
+  var _enteredUsername = '';
   void _submit() async {
     final isValid = _formkey.currentState!.validate();
-    if (!isValid) {
+    if (!isValid || !_isLogin && _selectedItem == null) {
+      //show error message
       return null;
+      //uncheck null if error occurs
     }
 
     _formkey.currentState!.save();
     // print(_enteredEmail);
     // print(_enteredPassword);
     try {
+      setState(() {
+        _isAuth = true;
+      });
       if (_isLogin) {
         final userCredentials = await _firebase.signInWithEmailAndPassword(
             email: _enteredEmail, password: _enteredPassword);
@@ -40,7 +51,21 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
             email: _enteredEmail, password: _enteredPassword);
-        print(userCredentials);
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('user_images')
+            .child('${userCredentials.user!.uid}.jpg');
+        await storageRef.putFile(_selectedItem!);
+        final imageUrl = await storageRef.getDownloadURL();
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredentials.user!.uid)
+            .set({
+          'username': _enteredUsername,
+          'email': _enteredEmail,
+          'image_url': imageUrl
+        });
+        print(imageUrl);
       }
     } on FirebaseAuthException catch (error) {
       var x = error;
@@ -49,6 +74,9 @@ class _AuthScreenState extends State<AuthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(error.message ?? 'Authentication Failed'),
       ));
+      setState(() {
+        _isAuth = false;
+      });
       // TODO
     }
     ;
@@ -77,7 +105,10 @@ class _AuthScreenState extends State<AuthScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!_isLogin) UserImagePicker(),
+                      if (!_isLogin)
+                        UserImagePicker(onPickImage: (pickedImage) {
+                          _selectedItem = pickedImage;
+                        }),
                       TextFormField(
                         decoration: const InputDecoration(
                           labelText: 'EmailAddress',
@@ -97,6 +128,23 @@ class _AuthScreenState extends State<AuthScreen> {
                           _enteredEmail = value!;
                         },
                       ),
+                      if (!_isLogin)
+                        TextFormField(
+                          decoration:
+                              const InputDecoration(labelText: 'Username'),
+                          // enableSuggestions: false,
+                          validator: (value) {
+                            if (value == null ||
+                                value.isEmpty ||
+                                value.trim().length < 4) {
+                              return 'Please Enter a valid username atleast length of 4';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _enteredUsername = value!;
+                          },
+                        ),
                       TextFormField(
                         decoration: const InputDecoration(
                           labelText: 'Password',
@@ -115,21 +163,24 @@ class _AuthScreenState extends State<AuthScreen> {
                       const SizedBox(
                         height: 12,
                       ),
-                      ElevatedButton(
-                          onPressed: _submit,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.background),
-                          child: Text(_isLogin ? 'Login' : 'Signup')),
-                      TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _isLogin = !_isLogin;
-                            });
-                          },
-                          child: Text(_isLogin
-                              ? 'Create an account'
-                              : 'I have an account'))
+                      if (_isAuth) const CircularProgressIndicator(),
+                      if (!_isAuth)
+                        ElevatedButton(
+                            onPressed: _submit,
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.background),
+                            child: Text(_isLogin ? 'Login' : 'Signup')),
+                      if (!_isAuth)
+                        TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isLogin = !_isLogin;
+                              });
+                            },
+                            child: Text(_isLogin
+                                ? 'Create an account'
+                                : 'I have an account'))
                     ],
                   ),
                 ),

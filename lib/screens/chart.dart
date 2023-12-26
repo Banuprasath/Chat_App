@@ -1,6 +1,9 @@
+import 'package:chatapp/new_message.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import '../chat_messages.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({Key? key}) : super(key: key);
@@ -9,7 +12,7 @@ class ChatScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Chat App"),
+        title: Text("Chat App "),
         actions: [
           IconButton(
               onPressed: () {
@@ -21,7 +24,12 @@ class ChatScreen extends StatelessWidget {
               ))
         ],
       ),
-      body: Center(child: Text("Loged In")),
+      body: Column(
+        children: [
+          Expanded(child: ChatMessage()),
+          NewMessage(),
+        ],
+      ),
     );
   }
 }
