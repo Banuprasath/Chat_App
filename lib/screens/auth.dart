@@ -120,7 +120,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           if (value == null ||
                               value.trim().isEmpty ||
                               !value.contains('@')) {
-                            return 'Please Enter Valid Email Acdress';
+                            return 'Please Enter Valid Email Address';
                           }
                           return null;
                         },
@@ -180,12 +180,16 @@ class _AuthScreenState extends State<AuthScreen> {
                             },
                             child: Text(_isLogin
                                 ? 'Create an account'
-                                : 'I have an account'))
+                                : 'I have an account')),
                     ],
                   ),
                 ),
               ),
-            )
+            ),
+            // Text(
+            //   'Developed by Banu Prasath S',
+            //   style: TextStyle(color: Colors.white, fontSize: 15),
+            // ),
           ],
         )),
       ),
